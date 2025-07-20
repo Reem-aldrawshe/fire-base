@@ -17,10 +17,9 @@ class _AddKhetmaState extends State<AddKhetma> {
   final _service = KhetmaService();
 
   String? _intention;
-  DateTime? _startDate;
-  DateTime? _endDate;
+  DateTimeRange? _dateRange;
   bool _isFajriyah = false;
-  bool _isPriority = false;
+  bool _isPublic = false;
 
   final List<String> _intentions = [
     'عن روح مسلم',
@@ -29,30 +28,28 @@ class _AddKhetmaState extends State<AddKhetma> {
     'تيسير أمر',
   ];
 
-  Future<void> _pickDate({required bool isStart}) async {
+  Future<void> _pickDateRange() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: now,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
+      initialDateRange: DateTimeRange(
+        start: now,
+        end: now.add(const Duration(days: 7)),
+      ),
     );
+
     if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
-      });
+      setState(() => _dateRange = picked);
     }
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_startDate == null || _endDate == null) {
+    if (_dateRange == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('اختر تاريخ البداية والنهاية')),
+        const SnackBar(content: Text('اختر مدة الختمة')),
       );
       return;
     }
@@ -60,46 +57,63 @@ class _AddKhetmaState extends State<AddKhetma> {
     final khetma = Khetma(
       name: _intention!,
       intention: _intention!,
-      startDate: _startDate!,
-      endDate: _endDate!,
+      startDate: _dateRange!.start,
+      endDate: _dateRange!.end,
       isFajriyah: _isFajriyah,
-      isPriority: _isPriority,
+      isPublic: _isPublic,
     );
 
-    await _service.addKhetma(khetma);
+    final id = await _service.addKhetma(khetma);
+final completeKhetma = khetma.copyWith(id: id);
+
+
+    if (!mounted) return;
+
+    // 🔷 ترجع للصفحة الرئيسية
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('✅ تمت إضافة الختمة برقم: $id')),
+    );
 
     widget.onAdded();
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
-        top: 16,
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF372527),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'إضافة ختمة جديدة',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              Align(
+                alignment: Alignment.centerRight,
+                child: const Text(
+                  'النية',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 4),
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'النية',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 ),
                 items: _intentions
                     .map((i) => DropdownMenuItem(value: i, child: Text(i)))
@@ -108,51 +122,90 @@ class _AddKhetmaState extends State<AddKhetma> {
                 validator: (val) => val == null ? 'اختر النية' : null,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _pickDate(isStart: true),
-                      child: Text(
-                        _startDate == null
-                            ? 'تاريخ البداية'
-                            : DateFormat.yMd().format(_startDate!),
-                      ),
-                    ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: const Text(
+                  'مدة الختمة',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w400,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _pickDate(isStart: false),
-                      child: Text(
-                        _endDate == null
-                            ? 'تاريخ النهاية'
-                            : DateFormat.yMd().format(_endDate!),
+                ),
+              ),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: _pickDateRange,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade400),
+                  ),
+                  child: Text(
+                    _dateRange == null
+                        ? ''
+                        : '${DateFormat.yMd().format(_dateRange!.start)} - ${DateFormat.yMd().format(_dateRange!.end)}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const SizedBox(width: 4),
+                      const Text(
+                        'ذات أولوية',
+                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
                       ),
-                    ),
+                      Checkbox(
+                        value: _isPublic,
+                        onChanged: (val) => setState(() => _isPublic = val!),
+                        side: const BorderSide(color: Colors.white),
+                        checkColor: const Color(0xFF372527),
+                        activeColor: Colors.white,
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const SizedBox(width: 4),
+                      const Text(
+                        'فجرية',
+                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                      Checkbox(
+                        value: _isFajriyah,
+                        onChanged: (val) => setState(() => _isFajriyah = val!),
+                        side: const BorderSide(color: Colors.white),
+                        checkColor: const Color(0xFF372527),
+                        activeColor: Colors.white,
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              CheckboxListTile(
-                value: _isFajriyah,
-                onChanged: (val) => setState(() => _isFajriyah = val!),
-                title: const Text('فجرية'),
-              ),
-              CheckboxListTile(
-                value: _isPriority,
-                onChanged: (val) => setState(() => _isPriority = val!),
-                title: const Text('ذات أولوية'),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6B3E26),
-                ),
-                child: const Text(
-                  'إضافة',
-                  style: TextStyle(color: Colors.white),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF8F1E5),
+                    foregroundColor: const Color(0xff442B0D),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'إضافة',
+                    style: TextStyle(fontWeight: FontWeight.w400, fontSize: 25),
+                  ),
                 ),
               ),
             ],

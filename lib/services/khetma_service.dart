@@ -1,15 +1,29 @@
-import 'package:serag_app/models/khetma.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/khetma.dart';
 
 class KhetmaService {
   final supabase = Supabase.instance.client;
 
   Future<List<Khetma>> getKhetmas() async {
-    final res = await supabase.from('Khetma').select().order('created_at');
-    return (res as List).map((e) => Khetma.fromMap(e)).toList();
-  }
+  final res = await supabase
+      .from('serag')
+      .select()
+      .order('created_at');
 
-  Future<void> addKhetma(Khetma khatma) async {
-    await supabase.from('khatma').insert(khatma.toMap());
-  }
+  print(res);
+
+  return (res as List).map((e) => Khetma.fromMap(e)).toList();
+}
+
+
+ Future<int> addKhetma(Khetma khetma) async {
+  final response = await supabase
+      .from('serag')
+      .insert(khetma.toMap())
+      .select('id')
+      .single();
+
+  return response['id'];
+}
+
 }

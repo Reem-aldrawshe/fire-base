@@ -20,7 +20,7 @@ class HomeScreenState extends State<HomeScreen> {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFE0A96D), Color(0xFF6B3E26)],
+            colors: [Color(0xffFBCB8F),Color(0xffFBCB8F), Color(0xffE9894D), Color(0xffF1AE63), Color(0xff9D6A63),Color(0xff372527),],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -51,7 +51,7 @@ class HomeScreenState extends State<HomeScreen> {
                     Transform(
                       alignment: Alignment.center,
                       transform:
-                          Matrix4.rotationY(3.1416), // لقلب الصورة أفقياً
+                          Matrix4.rotationY(3.1416), //للافقي 
                       child: Image.asset('assets/images/floral.png',
                           width: 24, height: 24),
                     ),
