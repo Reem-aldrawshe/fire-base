@@ -1,38 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:serag_app/screens/bottom_sheet_general.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/khetma.dart';
 
-class AddKhetma extends StatefulWidget {
-  final VoidCallback onAdded; 
-  final bool isPublic;
+class AddPrivateKhetmaBottomSheet extends StatefulWidget {
+  final VoidCallback onAdded;
 
-  const AddKhetma({
-    super.key,
-    required this.onAdded,
-    required this.isPublic,
-  });
+  const AddPrivateKhetmaBottomSheet({super.key, required this.onAdded});
 
   @override
-  State<AddKhetma> createState() => _AddKhetmaState();
+  State<AddPrivateKhetmaBottomSheet> createState() => _AddPrivateKhetmaBottomSheetState();
 }
 
-class _AddKhetmaState extends State<AddKhetma> {
+class _AddPrivateKhetmaBottomSheetState extends State<AddPrivateKhetmaBottomSheet> {
   final client = Supabase.instance.client;
 
   final _formKey = GlobalKey<FormState>();
-
   String? _intention;
   DateTimeRange? _dateRange;
   bool _isFajriyah = false;
-
-  final List<String> _intentions = [
-    'عن روح مسلم',
-    'قضاء حاجة',
-    'تفريج هم',
-    'تيسير أمر',
-  ];
 
   Future<void> _pickDateRange() async {
     final now = DateTime.now();
@@ -40,10 +25,7 @@ class _AddKhetmaState extends State<AddKhetma> {
       context: context,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
-      initialDateRange: DateTimeRange(
-        start: now,
-        end: now.add(const Duration(days: 7)),
-      ),
+      initialDateRange: DateTimeRange(start: now, end: now.add(const Duration(days: 7))),
     );
 
     if (picked != null) {
@@ -59,34 +41,17 @@ class _AddKhetmaState extends State<AddKhetma> {
       return;
     }
 
-    final response = await client.from('serag').insert({
+    await client.from('serag').insert({
       'name': _intention!,
       'intention': _intention!,
       'start_date': _dateRange!.start.toIso8601String(),
       'end_date': _dateRange!.end.toIso8601String(),
       'is_fajriyah': _isFajriyah,
-      'is_public': widget.isPublic,
-    }).select().maybeSingle();
-
-    if (response == null || response['id'] == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('فشل الإضافة')),
-      );
-      return;
-    }
-
-    final khetma = Khetma.fromMap(response);
+      'is_public': false,
+    });
 
     Navigator.pop(context); 
-
     widget.onAdded();
-
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => ManageKhetmaBottomSheet(khetma: khetma),
-    );
   }
 
   @override
@@ -102,11 +67,10 @@ class _AddKhetmaState extends State<AddKhetma> {
           key: _formKey,
           child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(fillColor: Colors.white, filled: true),
-                items: _intentions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              TextFormField(
+                decoration: const InputDecoration(fillColor: Colors.white, filled: true, labelText: 'نية الختمة'),
                 onChanged: (val) => _intention = val,
-                validator: (val) => val == null ? 'اختر النية' : null,
+                validator: (val) => val == null || val.isEmpty ? 'أدخل النية' : null,
               ),
               const SizedBox(height: 16),
               InkWell(
